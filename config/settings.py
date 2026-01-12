@@ -12,6 +12,9 @@ Resolved rule:
 from pathlib import Path
 import os
 
+from dotenv import load_dotenv
+load_dotenv()
+
 BASE_DIR = Path(__file__).resolve().parent.parent
 
 
@@ -100,22 +103,26 @@ ASGI_APPLICATION = "config.asgi.application"
 
 # --- Database ---
 # Default to Postgres in Docker. Falls back to SQLite for quick local runs.
-if env("POSTGRES_HOST", ""):
-    DATABASES = {
-        "default": {
-            "ENGINE": "django.db.backends.postgresql",
-            "NAME": env("POSTGRES_DB", "fego84"),
-            "USER": env("POSTGRES_USER", "fego84"),
-            "PASSWORD": env("POSTGRES_PASSWORD", "fego84"),
-            "HOST": env("POSTGRES_HOST", "db"),
-            "PORT": env("POSTGRES_PORT", "5432"),
-        }
-    }
-else:
+POSTGRES_LIVE = os.getenv("POSTGRES_LIVE")
+
+if POSTGRES_LIVE in ["False", False]:
+
     DATABASES = {
         "default": {
             "ENGINE": "django.db.backends.sqlite3",
             "NAME": BASE_DIR / "db.sqlite3",
+        }
+    }
+
+else:
+    DATABASES = {
+        "default": {
+            "ENGINE": "django.db.backends.postgresql",
+            "NAME": os.getenv("POSTGRES_DB"),
+            "USER": os.getenv("POSTGRES_USER"),
+            "PASSWORD": os.getenv("POSTGRES_PASSWORD"),
+            "HOST": os.getenv("POSTGRES_HOST"),
+            "PORT": os.getenv("POSTGRES_PORT"),
         }
     }
 
@@ -172,14 +179,16 @@ USE_TZ = True
 
 # --- Static files ---
 STATIC_URL = "/static/"
-STATIC_ROOT = Path(env("STATIC_ROOT", str(BASE_DIR / "staticfiles")))
+# STATIC_ROOT = Path(env("STATIC_ROOT", str(BASE_DIR / "staticfiles")))
+STATIC_ROOT = BASE_DIR / "staticfiles"
 STATICFILES_DIRS = [BASE_DIR / "static"]
+STATICFILES_STORAGE = "whitenoise.storage.CompressedManifestStaticFilesStorage"
 
-STORAGES = {
-    "staticfiles": {
-        "BACKEND": "whitenoise.storage.CompressedManifestStaticFilesStorage",
-    }
-}
+# STORAGES = {
+#     "staticfiles": {
+#         "BACKEND": "whitenoise.storage.CompressedManifestStaticFilesStorage",
+#     }
+# }
 
 
 # --- Security headers (Sprint F hardening) ---
