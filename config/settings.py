@@ -41,9 +41,9 @@ DEBUG = env("DEBUG", "0") == "1"
 ENVIRONMENT = env("ENVIRONMENT", "development")
 IS_PROD = ENVIRONMENT.lower() == "production"
 
-ALLOWED_HOSTS = [h.strip()
-                 for h in env("ALLOWED_HOSTS", "*").split(",") if h.strip()]
-
+# ALLOWED_HOSTS = [h.strip()
+#                  for h in env("ALLOWED_HOSTS", "*").split(",") if h.strip()]
+ALLOWED_HOSTS = ["*"]
 
 # --- Apps ---
 INSTALLED_APPS = [
