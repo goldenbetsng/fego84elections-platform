@@ -9,11 +9,8 @@ Resolved rule:
 - Voters cannot edit votes. One vote per voter per post.
 """
 
-# --- Standard library ---
 from pathlib import Path
 import os
-
-# --- Third-party ---
 import dj_database_url
 from dotenv import load_dotenv
 
