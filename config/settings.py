@@ -11,23 +11,32 @@ Resolved rule:
 
 from pathlib import Path
 import os
-
+import dj_database_url
 from dotenv import load_dotenv
+
 load_dotenv()
 
 BASE_DIR = Path(__file__).resolve().parent.parent
 
 
-def env(name: str, default: str | None = None) -> str:
-    val = os.getenv(name)
-    if val is None:
-        return default if default is not None else ""
-    return val
+def env(name: str, default: str | None = None) -> str | None:
+    """
+    Retrieve an environment variable by name.
+
+    Args:
+        name (str): The name of the environment variable.
+        default (str | None): Fallback value if the variable is not set.
+
+    Returns:
+        str | None: The environment variable value or the default.
+    """
+    return os.getenv(name, default)
 
 
 # --- Core ---
 SECRET_KEY = env("SECRET_KEY", "dev-secret-key-change-me")
 DEBUG = env("DEBUG", "0") == "1"
+
 # development | staging | production
 ENVIRONMENT = env("ENVIRONMENT", "development")
 IS_PROD = ENVIRONMENT.lower() == "production"
@@ -102,27 +111,33 @@ ASGI_APPLICATION = "config.asgi.application"
 
 
 # --- Database ---
-# Default to Postgres in Docker. Falls back to SQLite for quick local runs.
-POSTGRES_LIVE = os.getenv("POSTGRES_LIVE")
+"""
+Railway provides:
+- DATABASE_URL (public endpoint – may incur egress fees)
+- DATABASE_PRIVATE_URL (internal, no egress)
 
-if POSTGRES_LIVE in ["False", False]:
+We always prefer DATABASE_PRIVATE_URL when available.
+Fallback:
+- DATABASE_URL
+- SQLite for local development
+"""
 
+DATABASE_URL = env("DATABASE_PRIVATE_URL") or env("DATABASE_URL")
+
+if DATABASE_URL:
+    DATABASES = {
+        "default": dj_database_url.config(
+            default=DATABASE_URL,
+            conn_max_age=600,
+            ssl_require=IS_PROD,
+        )
+    }
+else:
+    # Local dev fallback
     DATABASES = {
         "default": {
             "ENGINE": "django.db.backends.sqlite3",
             "NAME": BASE_DIR / "db.sqlite3",
-        }
-    }
-
-else:
-    DATABASES = {
-        "default": {
-            "ENGINE": "django.db.backends.postgresql",
-            "NAME": os.getenv("POSTGRES_DB"),
-            "USER": os.getenv("POSTGRES_USER"),
-            "PASSWORD": os.getenv("POSTGRES_PASSWORD"),
-            "HOST": os.getenv("POSTGRES_HOST"),
-            "PORT": os.getenv("POSTGRES_PORT"),
         }
     }
 
@@ -149,13 +164,11 @@ LOGOUT_REDIRECT_URL = "home"
 
 
 # --- Sessions / inactivity ---
-# cookie lifetime; inactivity is enforced by middleware
 SESSION_COOKIE_AGE = 60 * 60 * 12
 SESSION_COOKIE_HTTPONLY = True
 SESSION_COOKIE_SAMESITE = "Lax"
 CSRF_COOKIE_SAMESITE = "Lax"
 
-# In production, cookies must be secure.
 if IS_PROD:
     SESSION_COOKIE_SECURE = True
     CSRF_COOKIE_SECURE = True
@@ -165,8 +178,6 @@ if IS_PROD:
 AXES_FAILURE_LIMIT = 5
 AXES_COOLOFF_TIME = 1  # hours
 AXES_LOCKOUT_TEMPLATE = "registration/locked_out.html"
-
-# Use IP + user-agent for better lockout accuracy.
 AXES_LOCKOUT_PARAMETERS = ["ip_address", "user_agent"]
 
 
@@ -177,69 +188,56 @@ USE_I18N = True
 USE_TZ = True
 
 
-# --- Static files ---
+# --- Static files (WhiteNoise + Railway) ---
 STATIC_URL = "/static/"
-# STATIC_ROOT = Path(env("STATIC_ROOT", str(BASE_DIR / "staticfiles")))
 STATIC_ROOT = BASE_DIR / "staticfiles"
 STATICFILES_DIRS = [BASE_DIR / "static"]
 STATICFILES_STORAGE = "whitenoise.storage.CompressedManifestStaticFilesStorage"
 
-# STORAGES = {
-#     "staticfiles": {
-#         "BACKEND": "whitenoise.storage.CompressedManifestStaticFilesStorage",
-#     }
-# }
 
-
-# --- Security headers (Sprint F hardening) ---
+# --- Security headers ---
 SECURE_CONTENT_TYPE_NOSNIFF = True
 X_FRAME_OPTIONS = "DENY"
 SECURE_REFERRER_POLICY = env("SECURE_REFERRER_POLICY", "same-origin")
 SECURE_CROSS_ORIGIN_OPENER_POLICY = "same-origin"
 
-# Add allowed origins for CSRF when behind a proxy / custom domain
-CSRF_TRUSTED_ORIGINS = [o.strip() for o in env(
-    "CSRF_TRUSTED_ORIGINS", "").split(",") if o.strip()]
+CSRF_TRUSTED_ORIGINS = [
+    o.strip() for o in env("CSRF_TRUSTED_ORIGINS", "").split(",") if o.strip()
+]
 
-# If running behind a reverse proxy that terminates TLS, set SECURE_PROXY_SSL_HEADER=1
+# Railway / proxy TLS termination
 if env("SECURE_PROXY_SSL_HEADER", "0") == "1":
     SECURE_PROXY_SSL_HEADER = ("HTTP_X_FORWARDED_PROTO", "https")
 
-# Keep users on HTTPS in production.
 if IS_PROD:
     SECURE_SSL_REDIRECT = env("SECURE_SSL_REDIRECT", "1") == "1"
-    SECURE_HSTS_SECONDS = int(env("SECURE_HSTS_SECONDS", "31536000"))  # 1 year
+    SECURE_HSTS_SECONDS = int(env("SECURE_HSTS_SECONDS", "31536000"))
     SECURE_HSTS_INCLUDE_SUBDOMAINS = env(
         "SECURE_HSTS_INCLUDE_SUBDOMAINS", "1") == "1"
     SECURE_HSTS_PRELOAD = env("SECURE_HSTS_PRELOAD", "1") == "1"
 
 
-# --- Content Security Policy (django-csp) ---
-# Note: templates/base.html uses an inline <style> block for simplicity.
-# If you remove inline CSS later, you can drop 'unsafe-inline'.
+# --- Content Security Policy ---
 CONTENT_SECURITY_POLICY = {
-    'DIRECTIVES': {
-        'base-uri': ("'self'",),
-        'default-src': ("'self'",),
-        'font-src': ("'self'", 'data:'),
-        'frame-ancestors': ("'none'",),
-        'img-src': ("'self'", 'data:'),
-        'object-src': ("'none'",),
-        'script-src': ("'self'",),
-        'style-src': ("'self'", "'unsafe-inline'"),
+    "DIRECTIVES": {
+        "base-uri": ("'self'",),
+        "default-src": ("'self'",),
+        "font-src": ("'self'", "data:"),
+        "frame-ancestors": ("'none'",),
+        "img-src": ("'self'", "data:"),
+        "object-src": ("'none'",),
+        "script-src": ("'self'",),
+        "style-src": ("'self'", "'unsafe-inline'"),
     }
 }
 
 
 # --- Logging ---
-# Keep logs on stdout for container platforms.
 LOGGING = {
     "version": 1,
     "disable_existing_loggers": False,
     "handlers": {
-        "console": {
-            "class": "logging.StreamHandler",
-        }
+        "console": {"class": "logging.StreamHandler"}
     },
     "root": {
         "handlers": ["console"],
@@ -250,7 +248,7 @@ LOGGING = {
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 
 
-# --- REST framework (optional; kept minimal) ---
+# --- REST framework ---
 REST_FRAMEWORK = {
     "DEFAULT_AUTHENTICATION_CLASSES": [
         "rest_framework.authentication.SessionAuthentication",
