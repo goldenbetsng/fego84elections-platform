@@ -1,0 +1,26 @@
+{% extends "base.html" %}
+{% block title %}Home · FEGO '84 Election{% endblock %}
+
+{% block content %}
+  <div class="card">
+    <div class="banner">{{ banner.title }}</div>
+    {% if banner.body %}<p>{{ banner.body }}</p>{% endif %}
+
+    {% if scroll.body %}
+      <div class="scroll">{{ scroll.body }}</div>
+    {% endif %}
+
+    <h2>Welcome</h2>
+    <p>{{ intro.body }}</p>
+
+    <div class="card">
+      <h3>Login</h3>
+      <p class="muted">Registered voters only.</p>
+      <a class="btn btn-primary" href="/accounts/login/">Go to Login</a>
+    </div>
+  </div>
+{% endblock %}
+
+{% block footer %}
+  {{ footer.body }}
+{% endblock %}

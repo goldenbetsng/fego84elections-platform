@@ -1,0 +1,36 @@
+{% extends "base.html" %}
+{% block title %}Vote · {{ post.title }}{% endblock %}
+
+{% block content %}
+  <div class="card">
+    <h2>{{ post.title }}</h2>
+    <p class="muted">Election: {{ election.title }}</p>
+
+    {% if existing_vote %}
+      <div class="msg msg-info">
+        You have already voted in this category. Votes cannot be changed.
+      </div>
+      <p><strong>Your selection:</strong> {{ existing_vote.candidate.display_name }}</p>
+      <p><strong>Time:</strong> {{ existing_vote.cast_at }}</p>
+      <a class="btn" href="/voter/">Back</a>
+    {% else %}
+      <form method="post">
+        {% csrf_token %}
+        <div class="card">
+          {% for c in candidates %}
+            <label style="display:block;margin:10px 0">
+              <input type="radio" name="candidate_id" value="{{ c.id }}" required>
+              <strong>{{ c.display_name }}</strong>
+              {% if c.bio %}<div class="muted">{{ c.bio }}</div>{% endif %}
+            </label>
+          {% endfor %}
+        </div>
+        <button class="btn btn-primary" type="submit">Submit Vote</button>
+        <a class="btn" href="/voter/" style="margin-left:8px">Cancel</a>
+      </form>
+      <p class="muted" style="margin-top:10px">Once submitted, your vote cannot be changed.</p>
+    {% endif %}
+  </div>
+{% endblock %}
+
+{% block footer %}{% endblock %}

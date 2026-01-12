@@ -1,0 +1,58 @@
+{% extends "admin/base_site.html" %}
+{% load i18n %}
+
+{% block content %}
+  <div class="content">
+    <h1>{{ title }}</h1>
+    <p>
+      Upload an <strong>.ods</strong> file containing a voter register.
+      Required column: <code>username</code>.
+      Optional columns: <code>first_name</code>, <code>last_name</code>, <code>email</code>, <code>membership_no</code>, <code>active</code>, <code>password</code>, <code>is_candidate</code>.
+    </p>
+
+    <form method="post" enctype="multipart/form-data" style="max-width: 720px;">
+      {% csrf_token %}
+      <fieldset class="module aligned">
+        {{ form.as_p }}
+      </fieldset>
+      <div class="submit-row">
+        <input type="submit" value="Import" class="default" />
+      </div>
+    </form>
+
+    {% if summary %}
+      <hr/>
+      <h2>Import Summary</h2>
+      <ul>
+        <li>Created: {{ summary.created }}</li>
+        <li>Updated: {{ summary.updated }}</li>
+        <li>Skipped: {{ summary.skipped }}</li>
+        <li>Errors: {{ summary.errors }}</li>
+      </ul>
+
+      <h3>Row Results</h3>
+      <div style="overflow: auto; max-height: 420px; border: 1px solid #ddd; padding: 8px;">
+        <table class="adminlist" style="width:100%; border-collapse: collapse;">
+          <thead>
+            <tr>
+              <th style="text-align:left;">Row</th>
+              <th style="text-align:left;">Username</th>
+              <th style="text-align:left;">Action</th>
+              <th style="text-align:left;">Message</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for r in summary.results %}
+              <tr>
+                <td>{{ r.row_index }}</td>
+                <td>{{ r.username }}</td>
+                <td>{{ r.action }}</td>
+                <td>{{ r.message }}</td>
+              </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    {% endif %}
+  </div>
+{% endblock %}

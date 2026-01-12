@@ -1,0 +1,8 @@
+{% extends "admin/change_list.html" %}
+
+{% block object-tools-items %}
+  {{ block.super }}
+  <li>
+    <a href="voter-import/" class="addlink">Import Voter Register (.ods)</a>
+  </li>
+{% endblock %}

@@ -1,0 +1,69 @@
+{% extends "admin/base_site.html" %}
+
+{% block content %}
+  <div class="content">
+    <h1>{{ title }}</h1>
+
+    <p>
+      <strong>Total voters:</strong> {{ total_voters }} &nbsp;|
+      <strong>Total votes cast:</strong> {{ total_votes_cast }}
+    </p>
+
+    <p>
+      <a href="reports.csv" class="button">Download Results CSV</a>
+      <a href="participation/" class="button">View Participation</a>
+    </p>
+
+    {% for pr in post_results %}
+      <div class="module" style="margin-top: 16px;">
+        <h2 style="display:flex; gap:12px; align-items:center; flex-wrap:wrap;">
+          <span>{{ pr.post.title }}</span>
+          <span class="help">Total votes: {{ pr.total_votes }}</span>
+          {% if pr.post.is_tiebreak %}
+            <span class="help">(Tie-break)</span>
+          {% endif %}
+          {% if pr.is_tie %}
+            <span style="color:#b00; font-weight:bold;">Tie detected</span>
+          {% endif %}
+        </h2>
+
+        {% if pr.candidate_results %}
+          <table class="adminlist" style="width:100%;">
+            <thead>
+              <tr>
+                <th>Candidate</th>
+                <th style="width:160px;">Votes</th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for cr in pr.candidate_results %}
+                <tr>
+                  <td>{{ cr.display_name }}</td>
+                  <td>{{ cr.votes }}</td>
+                </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        {% else %}
+          <p class="help">No votes cast for this post yet.</p>
+        {% endif %}
+
+        <p class="help">
+          Post settings: status={{ pr.post.status }}, start={{ pr.post.start_at|default:"-" }}, end={{ pr.post.end_at|default:"-" }}
+        </p>
+
+        {% if pr.is_tie and can_create_tiebreak and not pr.post.is_tiebreak %}
+          <form method="post" action="tiebreak/create/" style="margin-top: 10px;">
+            {% csrf_token %}
+            <input type="hidden" name="parent_post_id" value="{{ pr.post.id }}" />
+            <input type="submit" class="default" value="Create Tie-break Post (new category)" />
+            <span class="help">Creates “{{ pr.post.title }} (Tie-break Round N)” with only tied candidates.</span>
+          </form>
+        {% elif pr.is_tie and not can_create_tiebreak and not pr.post.is_tiebreak %}
+          <p class="help">Tie-break creation requires permissions to manage posts + candidates.</p>
+        {% endif %}
+      </div>
+    {% endfor %}
+
+  </div>
+{% endblock %}

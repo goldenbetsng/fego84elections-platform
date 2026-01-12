@@ -1,0 +1,60 @@
+{% extends "admin/base_site.html" %}
+{% load elections_extras %}
+
+{% block content %}
+  <div class="content">
+    <h1>{{ title }}</h1>
+
+    <p>
+      <a href="participation.csv" class="button">Download Participation CSV</a>
+      <a href="reports/" class="button">Back to Results</a>
+    </p>
+
+    <form method="get" style="margin: 8px 0 16px 0;">
+      <label>
+        Page size:
+        <input type="number" name="page_size" value="{{ page_size }}" min="10" max="500" style="width: 90px;" />
+      </label>
+      <input type="submit" value="Apply" />
+    </form>
+
+    <div style="overflow: auto; border: 1px solid #ddd; padding: 8px;">
+      <table class="adminlist" style="border-collapse: collapse; min-width: 900px;">
+        <thead>
+          <tr>
+            <th>Username</th>
+            <th>Name</th>
+            {% for p in posts %}
+              <th>{{ p.title }} (Voted)</th>
+              <th>{{ p.title }} (Time)</th>
+            {% endfor %}
+          </tr>
+        </thead>
+        <tbody>
+          {% for r in rows %}
+            <tr>
+              <td>{{ r.user.username }}</td>
+              <td>{{ r.user.first_name }} {{ r.user.last_name }}</td>
+              {% for p in posts %}
+                {% with cell=r.by_post|get_item:p.id %}
+                  <td>{% if cell.voted %}<strong>YES</strong>{% else %}NO{% endif %}</td>
+                  <td>{{ cell.cast_at|default:"" }}</td>
+                {% endwith %}
+              {% endfor %}
+            </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+
+    <div class="paginator" style="margin-top: 12px;">
+      {% if page_obj.has_previous %}
+        <a href="?page={{ page_obj.previous_page_number }}&page_size={{ page_size }}">&laquo; Prev</a>
+      {% endif %}
+      <span class="help">Page {{ page_obj.number }} of {{ page_obj.paginator.num_pages }}</span>
+      {% if page_obj.has_next %}
+        <a href="?page={{ page_obj.next_page_number }}&page_size={{ page_size }}">Next &raquo;</a>
+      {% endif %}
+    </div>
+  </div>
+{% endblock %}

@@ -1,0 +1,39 @@
+{% extends "base.html" %}
+{% block title %}Member Area · FEGO '84 Election{% endblock %}
+
+{% block content %}
+  <div class="card">
+    <h2>Member Area</h2>
+    {% if not election %}
+      <p class="muted">No open election right now.</p>
+    {% else %}
+      <p><strong>Election:</strong> {{ election.title }}</p>
+      <p><strong>Status:</strong> {% if is_open_now %}Open{% else %}Not Open{% endif %}</p>
+
+      <div class="grid">
+        {% for row in post_rows %}
+          <div class="card">
+            <h3>{{ row.post.title }}</h3>
+            <p class="muted">
+              Category status:
+              {% if row.post.is_open_now %}<strong>Open</strong>{% else %}<strong>Closed</strong>{% endif %}
+            </p>
+            {% if row.vote %}
+              <p class="muted">Voted: {{ row.vote.candidate.display_name }}<br>Time: {{ row.vote.cast_at }}</p>
+              <a class="btn" href="/voter/post/{{ row.post.id }}/">View</a>
+            {% else %}
+              <p class="muted">Not voted yet.</p>
+              {% if row.post.is_open_now %}
+                <a class="btn btn-primary" href="/voter/post/{{ row.post.id }}/">Vote</a>
+              {% else %}
+                <a class="btn" href="/voter/post/{{ row.post.id }}/">View</a>
+              {% endif %}
+            {% endif %}
+          </div>
+        {% endfor %}
+      </div>
+    {% endif %}
+  </div>
+{% endblock %}
+
+{% block footer %}{% endblock %}
